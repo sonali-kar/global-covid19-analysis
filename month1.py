@@ -10,6 +10,7 @@ import plotly.io as pio
 pio.renderers.default='browser'
 
 
+
 confirmed_cases = pd.read_csv('time_series_covid19_confirmed_global.csv')
 print(confirmed_cases.shape)
 deaths_cases = pd.read_csv('time_series_covid19_deaths_global.csv')
@@ -88,10 +89,11 @@ y4= pd.DataFrame(y4)
 #**********************************************
 fig = go.Figure()
 for col in y1.columns:
-    fig.add_trace(go.Line(x=total_confirmed_cases_sum.index , y = y1[col], name='Confirmed'))
-    fig.add_trace(go.Line(x=total_death_cases_sum.index , y = y2[col],name='Deaths'))
-    fig.add_trace(go.Line(x=total_recovered_cases_sum.index , y = y3[col],name='Recovered'))
-    fig.add_trace(go.Line(x=total_death_cases_sum.index , y = y4[col],name='Active'))
+    fig.add_trace(go.Scatter(x=total_confirmed_cases_sum.index , y = y1[col], name='Confirmed',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=total_death_cases_sum.index , y = y2[col],name='Deaths',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=total_recovered_cases_sum.index , y = y3[col],name='Recovered',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=total_death_cases_sum.index , y = y4[col],name='Active',mode='lines+markers'))
 fig.show()
  
+# *********************************************** 
 
