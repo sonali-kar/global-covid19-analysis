@@ -94,14 +94,16 @@ recovered_cases_sum_index =  total_recovered_cases_sum.index
 recovered_cases_sum_values = total_recovered_cases_sum.values
 
 recovered_cases_sum_values = pd.DataFrame(recovered_cases_sum_values)
-    
+#******new********************************************************************
+
+recovered_cases_dates_df = pd.DataFrame(recovered_cases_sum_index)
+recovered_cases_dates_df.columns = ['date']   
     
 #**********************************************************************************    
     
 active_cases_sum_values = np.abs(confirmed_cases_sum_values[0]-death_cases_sum_values[0]-recovered_cases_sum_values[0])
 active_cases_sum_values= pd.DataFrame(active_cases_sum_values)
 
-#label = ['Confirmed','Deaths','Recovered','Active']
 
 
 #**********************************************
@@ -126,10 +128,15 @@ global_cases.copy().sort_values('Confirmed',ascending = False).reset_index(drop=
 import datetime as dt
 deaths_dates = death_cases_dates_df['date']
 confirmed_dates = confirmed_cases_dates_df['date']
+recovered_dates = recovered_cases_dates_df['date']
+active_dates = confirmed_cases_dates_df['date']
 
 
 date_format_deaths = [pd.to_datetime(d) for d in deaths_dates]
 date_format_confirmed = [pd.to_datetime(d) for d in confirmed_dates]
+
+date_format_recovered = [pd.to_datetime(d) for d in recovered_dates]
+date_format_active = [pd.to_datetime(d) for d in active_dates]
 
 
 import numpy as np
@@ -137,14 +144,18 @@ from sklearn import linear_model
 
 X_train_deaths = date_format_deaths
 X_train_confirmed = date_format_confirmed
+X_train_recovered = date_format_recovered
+X_train_active = date_format_active
+
 
 y_train_confirmed = confirmed_cases_sum_values
 y_train_deaths = death_cases_sum_values
+y_train_recovered = recovered_cases_sum_values
+y_train_active = active_cases_sum_values
 
 
 starting_peak_date = 58
 #starting_date_confirmed = 58
-
 
 day_numbers = []
 
@@ -152,25 +163,37 @@ for i in range(1, (len(X_train_deaths)+1)):
     day_numbers.append([i])
 X_train_deaths = day_numbers
 X_train_confirmed = day_numbers
-
+X_train_recovered = day_numbers
+X_train_active = day_numbers
 
 X_train_confirmed = X_train_confirmed[starting_peak_date:]
 X_train_deaths = X_train_deaths[starting_peak_date:]
+X_train_recovered = X_train_recovered[starting_peak_date:]
+X_train_active = X_train_active[starting_peak_date:]
+
 
 y_train_deaths = y_train_deaths[starting_peak_date:]
 y_train_confirmed = y_train_confirmed[starting_peak_date:]
+y_train_recovered = y_train_recovered[starting_peak_date:]
+y_train_active = y_train_active[starting_peak_date:]
 
 
 linear_regr_deaths = linear_model.LinearRegression()
 linear_regr_confirmed = linear_model.LinearRegression()
+linear_regr_recovered = linear_model.LinearRegression()
+linear_regr_active = linear_model.LinearRegression()
+
 
 linear_regr_deaths.fit(X_train_deaths, y_train_deaths)
 linear_regr_confirmed.fit(X_train_confirmed, y_train_confirmed)
+linear_regr_recovered.fit(X_train_recovered,y_train_recovered)
+linear_regr_active.fit(X_train_active,y_train_active)
+
 
 print ("Linear Regression Model Score for Confirmed cases: %s" % (linear_regr_confirmed.score(X_train_confirmed, y_train_confirmed)))
 print ("Linear Regression Model Score for Deaths cases: %s" % (linear_regr_deaths.score(X_train_deaths, y_train_deaths)))
-
-
+print ("Linear Regression Model Score for Recovered cases: %s" % (linear_regr_recovered.score(X_train_recovered, y_train_recovered)))
+print ("Linear Regression Model Score for Active cases: %s" % (linear_regr_active.score(X_train_active, y_train_active)))
 
 
 # Predict future trend
@@ -178,19 +201,26 @@ from sklearn.metrics import max_error
 import math
 y_pred_confirmed = linear_regr_confirmed.predict(X_train_confirmed)
 y_pred_deaths = linear_regr_deaths.predict(X_train_deaths)
+y_pred_recovered = linear_regr_recovered.predict(X_train_recovered)
+y_pred_active = linear_regr_active.predict(X_train_active)
+
 
 
 error_deaths = max_error(y_train_deaths, y_pred_deaths)
 error_confirmed = max_error(y_train_confirmed, y_pred_confirmed)
+error_recovered= max_error(y_train_recovered, y_pred_recovered)
+error_active= max_error(y_train_active, y_pred_active)
 
 
 
 X_test = []
-future_days = 50
+future_days = 100
 for i in range(starting_peak_date, starting_peak_date + future_days):
     X_test.append([i])
 y_pred_linear_deaths = linear_regr_deaths.predict(X_test)
 y_pred_linear_confirmed = linear_regr_confirmed.predict(X_test)
+y_pred_linear_recovered = linear_regr_recovered.predict(X_test)
+y_pred_linear_active = linear_regr_active.predict(X_test)
 
 
 y_pred_max_deaths = []
@@ -207,37 +237,53 @@ for i in range(0, len(y_pred_linear_confirmed)):
     y_pred_min_confirmed.append(y_pred_linear_confirmed[i] - error_confirmed)
     
 
-    
-plt.grid()
-plt.scatter(X_train_confirmed, y_train_confirmed, color='yellow')
-plt.scatter(X_train_deaths, y_train_deaths, color='green')
-# plot linear regression prediction
-plt.plot(X_test, y_pred_linear_deaths, color='red', linewidth=2)
-plt.plot(X_test, y_pred_linear_confirmed, color='brown', linewidth=2)
-plt.show() 
+
+y_pred_max_recovered = []
+y_pred_min_recovered = []
+for i in range(0, len(y_pred_linear_recovered)):
+    y_pred_max_recovered.append(y_pred_linear_recovered[i] + error_recovered)
+    y_pred_min_recovered.append(y_pred_linear_recovered[i] - error_recovered)
 
 
-
-
+y_pred_max_active = []
+y_pred_min_active = []
+for i in range(0, len(y_pred_linear_active)):
+    y_pred_max_active.append(y_pred_linear_active[i] + error_active)
+    y_pred_min_active.append(y_pred_linear_active[i] - error_active)
 
 
 
 y_pred_linear_deaths = pd.DataFrame(y_pred_linear_deaths)
 y_pred_linear_confirmed = pd.DataFrame(y_pred_linear_confirmed)
+y_pred_linear_recovered = pd.DataFrame(y_pred_linear_recovered)
+y_pred_linear_active = pd.DataFrame(y_pred_linear_active)
+
+
 y_train_confirmed = pd.DataFrame(y_train_confirmed)
 y_train_deaths = pd.DataFrame(y_train_deaths)
+y_train_recovered = pd.DataFrame(y_train_recovered)
+y_train_active = pd.DataFrame(y_train_active)
+
 
 X_test = pd.DataFrame(X_test)
 X_train_confirmed = pd.DataFrame(X_train_confirmed)
 X_train_deaths = pd.DataFrame(X_train_deaths)
+X_train_recovered = pd.DataFrame(X_train_recovered)  
+X_train_active = pd.DataFrame(X_train_active)  
+
+
+
 
 fig = go.Figure()
 for col in y_train_deaths.columns:
     fig.add_trace(go.Scatter(x=X_test[col] , y = y_pred_linear_confirmed[col],name='Predicted CONFIRMED',mode='lines+markers'))
     fig.add_trace(go.Scatter(x=X_train_confirmed[col] , y = y_train_confirmed[col],name='Confirmed',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=X_train_recovered[col] , y = y_train_recovered[col],name='Recovered',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=X_test[col] , y = y_pred_linear_recovered[col], name='Predicted RECOVERED',mode='lines+markers'))
     fig.add_trace(go.Scatter(x=X_train_deaths[col] , y = y_train_deaths[col],name='Deaths',mode='lines+markers'))
     fig.add_trace(go.Scatter(x=X_test[col] , y = y_pred_linear_deaths[col], name='Predicted DEATHS',mode='lines+markers'))
-
+    fig.add_trace(go.Scatter(x=X_train_active[col] , y = y_train_active[col],name='Active',mode='lines+markers'))
+    fig.add_trace(go.Scatter(x=X_test[col] , y = y_pred_linear_active[col], name='Predicted ACTIVE',mode='lines+markers'))
 fig.show()
 
 
